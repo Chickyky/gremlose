@@ -70,6 +70,7 @@ class Gremlose {
     }
 
     name = _.snakeCase(name);
+    name = name.toUpperCase();
 
     return new GremloseEdge(this.#g, this.#client, name);
   }
