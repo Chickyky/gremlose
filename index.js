@@ -154,12 +154,14 @@ class Gremlose {
     return chain.next();
   }
 
-  async executeQuery(query) {
-    // const result = await this.#client.submit(helper.makeQuery(query), {});
+  async executeQuery(query, isReturnJson = true) {
     const result = await this.#client.submit(query, {});
 
-    return result._items;
-    // return helper.nodesToJson(result._items);
+    if (result && result._items) {
+      return isReturnJson ? helper.nodesToJson(result._items) : result._items;
+    }
+
+    return result;
   }
 
   async getJsonById (type, id) {
