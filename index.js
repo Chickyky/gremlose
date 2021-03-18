@@ -235,6 +235,10 @@ class Gremlose {
     return async.mapLimit(arrVertex, 1, async (v) => this.getProps(v));
   }
 
+  nodesToJson (nodes) {
+    return helper.nodesToJson(nodes);
+  }
+
   async close() {
     await this.#drc.close();
     await this.#client.close();

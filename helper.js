@@ -7,44 +7,6 @@ const dayjs = require('dayjs');
 const { t: { id } } = gremlin.process;
 const { cardinality: { single, list } } = gremlin.process;
 
-function mapToObj(inputMap) {
-  let obj = {};
-
-  inputMap.forEach((value, key) => {
-    obj[key] = value
-  });
-
-  return obj;
-}
-
-function edgesToJson(edgeList) {
-  return edgeList.map(
-    edge => ({
-      id: typeof edge.get('id') !== 'string' ? JSON.stringify(edge.get('id')) : edge.get('id'),
-      from: edge.get('from'),
-      to: edge.get('to'),
-      label: edge.get('label'),
-      properties: mapToObj(edge.get('properties')),
-    })
-  );
-}
-
-function nodesToJson(nodeList) {
-  return nodeList.map(
-    node => ({
-      id: node.get('id'),
-      label: node.get('label'),
-      properties: mapToObj(node.get('properties')),
-      edges: edgesToJson(node.get('edges'))
-    })
-  );
-}
-
-function makeQuery(query, nodeLimit) {
-  const nodeLimitQuery = !isNaN(nodeLimit) && Number(nodeLimit) > 0 ? `.limit(${nodeLimit})`: '';
-  return `${query}${nodeLimitQuery}.dedup().as('node').project('id', 'label', 'properties', 'edges').by(__.id()).by(__.label()).by(__.valueMap().by(__.unfold())).by(__.outE().project('id', 'from', 'to', 'label', 'properties').by(__.id()).by(__.select('node').id()).by(__.inV().id()).by(__.label()).by(__.valueMap().by(__.unfold())).fold())`;
-}
-
 function stringifyValue(value) {
   if (typeof value === 'string') {
     return `'${value}'`;
@@ -67,6 +29,38 @@ let addMeta = (_args, meta = {}) => {
   }
 
   return _args;
+}
+
+function mapToObj (map = new Map) {
+  return Object.fromEntries(Array.from(map.entries(), ([ k, v ]) => v instanceof Map
+    ? [k, mapToObj(v)]
+    : [k, v])
+  )
+}
+
+function isHaveMap (obj) {
+  return Object.values(obj).some(v => v instanceof Map)
+}
+
+function nodesToJson (obj) {
+  if (Array.isArray(obj)) obj = { __temp: obj };
+  obj = flatten(obj);
+
+  while (isHaveMap(obj)) {
+    for (let key in obj) {
+      if (obj[key] instanceof Map) {
+        obj[key] = mapToObj(obj[key])
+      }
+    }
+
+    obj = flatten(obj)
+  }
+
+  obj = flatten.unflatten(obj);
+
+  if (obj.__temp) obj = obj.__temp;
+
+  return obj;
 }
 
 module.exports = {
@@ -219,10 +213,6 @@ module.exports = {
     return _output;
   },
 
-  mapToObj,
-  edgesToJson,
   nodesToJson,
-  makeQuery,
-
   stringifyValue
 }
